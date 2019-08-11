@@ -31,24 +31,34 @@ class DriverTracker {
     function __construct(){
         register_activation_hook( __FILE__, [ $this, 'activation' ] );
         register_deactivation_hook( __FILE__, [ $this, 'deactivation' ] );
+        add_action('admin_enqueue_scripts', [$this, 'my_enqueue']);
+        add_action( 'wp_dashboard_setup', [$this, 'metabox_general_map'] );
+        add_filter( 'login_redirect', [ $this, 'loginRedirect' ], 10, 3);
+    }   
 
-
- 
-        add_action('wp_dashboard_setup', [$this, 'my_custom_dashboard_widgets'] );
-
+    function my_enqueue($hook) {
+        wp_register_script( 'googlemap-api', 'https://maps.googleapis.com/maps/api/js?key=AIzaSyBbiaQ3VC5MMjkzJnAOFr0bP1RGyjmfnRA', array(), true, true );
+        wp_enqueue_script('mapjs', plugin_dir_url(__FILE__) . '/assets/js/map.js',  array('googlemap-api'), true, true );  
     }
 
-    function my_custom_dashboard_widgets() {
+    function loginRedirect( $redirect_to, $request, $user ){
+        return "wp-admin/index.php";
+    }
+
+    function metabox_general_map() {
         global $wp_meta_boxes;
-        wp_add_dashboard_widget('custom_help_widget', 'Theme Support', [$this, 'custom_dashboard_help']);
+        remove_meta_box( 'dashboard_primary','dashboard','side' );
+        remove_meta_box('dashboard_activity','dashboard', 'normal');
+        wp_add_dashboard_widget('custom_help_widget', 'General Map', [$this, 'custom_dashboard_help']);
     }
          
     function custom_dashboard_help() {
-
+        wp_enqueue_script('mapjs');
         $current_user_role = wp_get_current_user()->roles;
-        echo "<pre>";
-        var_dump(in_array('driver',$current_user_role));
-        echo "</pre>";
+        ?>
+            <style> #map{height: 400px;width: 100%;}</style> 
+            <div id="map"></div>      
+        <?php
     }
 
     function activation() {
@@ -64,6 +74,5 @@ class DriverTracker {
         } 
         flush_rewrite_rules();
     }
-    
 }
 $obj = new DriverTracker();
